@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=fabulari
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    networks:
+      - fabulari-network
+
+  backend:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./back:/app
+      - /app/node_modules
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=fabulari
+      - DB_PORT=5432
+    depends_on:
+      - postgres
+    networks:
+      - fabulari-network
+
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    ports:
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    volumes:
+      - ./front:/app
+      - /app/node_modules
+    environment:
+      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+    depends_on:
+      - backend
+    networks:
+      - fabulari-network
+
+networks:
+  fabulari-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
