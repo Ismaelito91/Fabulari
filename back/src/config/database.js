@@ -9,11 +9,12 @@ const sequelize = new Sequelize({
   port: process.env.DB_PORT,
   dialect: "postgres",
   logging: false,
-  pool: {
+  retry: {
     max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000,
+    match: [/ConnectionError/],
+  },
+  dialectOptions: {
+    connectTimeout: 60000,
   },
 });
 

@@ -11,10 +11,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Synchronisation de la base de données
 const syncDatabase = async () => {
   try {
-    // Force: true va supprimer et recréer les tables
     await sequelize.sync({ force: true });
     console.log("✅ Base de données synchronisée avec succès");
 
@@ -47,7 +45,7 @@ const initializeDatabase = async () => {
 
 initializeDatabase();
 
-// Route de base
+// Route de base pour tester que le serveur fonctionne
 app.get("/", (req, res) => {
   res.json({ message: "Bienvenue sur l'API Fabulari" });
 });
