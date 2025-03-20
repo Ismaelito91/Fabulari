@@ -1,5 +1,5 @@
 // Remplacez par votre URL ngrok actuelle
-export const API_URL = "https://votre-url-ngrok.io";
+export const API_URL = "http://10.0.2.2:3001";
 
 // Configuration pour Axios
 export const API_CONFIG = {

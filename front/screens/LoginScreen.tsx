@@ -4,6 +4,7 @@ import { login } from "../services/authService";
 import { StackNavigationProp } from "@react-navigation/stack";
 
 type RootStackParamList = {
+  Home: undefined;
   Login: undefined;
   Register: undefined;
   Rooms: undefined;
