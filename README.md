@@ -53,6 +53,7 @@ Créez un fichier `.env` dans le dossier `back` :
 # À la racine du projet
 docker-compose up -d postgres  # Démarre uniquement la base de données
 docker-compose ps             # Vérifie que le conteneur est bien démarré
+ docker compose up --build
 ```
 
 5. Démarrage en développement
