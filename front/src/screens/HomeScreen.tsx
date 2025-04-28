@@ -1,17 +1,27 @@
 import React from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../types'; // adapte le chemin selon où est ton fichier types
 
-export default function HomeScreen({ navigation }: any) {
+type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+
+type Props = {
+  navigation: HomeScreenNavigationProp;
+};
+
+export default function HomeScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Bienvenue sur Fabulari 📚</Text>
+
       <Button 
         title="Voir la liste des livres" 
-        onPress={() => navigation.navigate('BookList')} // Naviguer vers BookListScreen
+        onPress={() => navigation.navigate('BookList')}
       />
+
       <Button 
-        title="test" 
-        onPress={() => navigation.navigate('ProfileScreen')} // Naviguer vers 
+        title="Aller au Profil" 
+        onPress={() => navigation.navigate('ProfileScreen')}
       />
     </View>
   );
