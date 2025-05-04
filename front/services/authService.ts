@@ -8,7 +8,7 @@ export const login = async (
   password: string
 ): Promise<LoginResponse> => {
   try {
-    const response = await axios.post(
+    const response = await axios.post<LoginResponse>(
       ENDPOINTS.LOGIN,
       { email, password },
       API_CONFIG
@@ -25,7 +25,7 @@ export const register = async (
   password: string
 ): Promise<RegisterResponse> => {
   try {
-    const response = await axios.post(
+    const response = await axios.post<RegisterResponse>(
       ENDPOINTS.REGISTER,
       { username, email, password },
       API_CONFIG
@@ -38,7 +38,7 @@ export const register = async (
 
 export const getProfile = async (token: string): Promise<User> => {
   try {
-    const response = await axios.get(ENDPOINTS.PROFILE, {
+    const response = await axios.get<User>(ENDPOINTS.PROFILE, {
       headers: {
         ...API_CONFIG.headers,
         Authorization: `Bearer ${token}`,

@@ -1,5 +1,5 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "./node_modules/expo/tsconfig.base",
   "compilerOptions": {
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
@@ -10,6 +10,7 @@
     "moduleResolution": "node",
     "noEmit": true,
     "strict": true,
+<<<<<<< HEAD
     "target": "esnext",
     "skipLibCheck": true,
     "resolveJsonModule": true,
@@ -30,4 +31,8 @@
     "babel.config.js",
     "metro.config.js"
   ]
+=======
+    "esModuleInterop": true
+  }
+>>>>>>> f4f95fb2763f42b37537dda4f69a5ae47689a8cd
 }
