@@ -9,21 +9,27 @@ const { Server } = require("socket.io");
 const path = require("path");
 
 // Importation des routes
-const authRoutes = require("../routes/authRoutes");
-const roomRoutes = require("../routes/roomRoutes");
-const chatRoutes = require("../routes/chatRoutes");
+const authRoutes = require("./routes/authRoutes");
+const roomController = require("./routes/roomRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN,
+    origin: "*", // Permettre toutes les origines pendant le développement
     methods: ["GET", "POST"],
   },
 });
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: "*", // Permettre toutes les origines pendant le développement
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json());
 
 // Synchronisation de la base de données
@@ -77,7 +83,7 @@ initializeDatabase();
 
 // Routes API
 app.use("/api/auth", authRoutes);
-app.use("/api/rooms", roomRoutes);
+app.use("/api/rooms", roomController);
 app.use("/api/chat", chatRoutes);
 
 // Route de base
