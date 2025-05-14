@@ -9,7 +9,8 @@
     "lib": [
       "es2017"
     ],
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
+    "module": "Node16",
     "noEmit": true,
     "strict": true,
     "target": "esnext",

@@ -3,11 +3,11 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 
 // Importation des écrans
-import HomeScreen from "./screens/HomeScreen";
-import LoginScreen from "./screens/LoginScreen";
-import RegisterScreen from "./screens/RegisterScreen";
-import RoomsScreen from "./screens/RoomsScreen";
-import ChatScreen from "./screens/ChatScreen";
+import HomeScreen from "./src/screens/HomeScreen";
+import LoginScreen from "./src/screens/LoginScreen";
+import RegisterScreen from "./src/screens/RegisterScreen";
+import RoomsScreen from "./src/screens/RoomsScreen";
+import ChatScreen from "./src/screens/ChatScreen";
 
 type RootStackParamList = {
   Home: undefined;
@@ -51,6 +51,9 @@ export default function App() {
           options={{ title: "Salles" }}
         />
         <Stack.Screen name="Chat" component={ChatScreen} />
+
+
+
       </Stack.Navigator>
     </NavigationContainer>
   );
