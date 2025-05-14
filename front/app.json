@@ -1,31 +1,18 @@
 {
   "expo": {
     "name": "Fabulari",
-<<<<<<< HEAD
     "slug": "fabulari",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": ["**/*"],
-=======
-    "slug": "Fabulari",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": ".src/assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
->>>>>>> f4f95fb2763f42b37537dda4f69a5ae47689a8cd
     "ios": {
       "supportsTablet": true
     },
@@ -36,11 +23,7 @@
       }
     },
     "web": {
-<<<<<<< HEAD
       "favicon": "./assets/favicon.png"
-=======
-      "favicon": "./assets/icon.png"
->>>>>>> f4f95fb2763f42b37537dda4f69a5ae47689a8cd
     }
   }
 }

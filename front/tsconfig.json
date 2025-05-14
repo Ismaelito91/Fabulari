@@ -6,11 +6,12 @@
     "esModuleInterop": true,
     "isolatedModules": true,
     "jsx": "react-native",
-    "lib": ["es2017"],
+    "lib": [
+      "es2017"
+    ],
     "moduleResolution": "node",
     "noEmit": true,
     "strict": true,
-<<<<<<< HEAD
     "target": "esnext",
     "skipLibCheck": true,
     "resolveJsonModule": true,
@@ -22,17 +23,11 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "**/*.tsx"
   ],
   "exclude": [
     "node_modules",
     "babel.config.js",
     "metro.config.js"
   ]
-=======
-    "esModuleInterop": true
-  }
->>>>>>> f4f95fb2763f42b37537dda4f69a5ae47689a8cd
 }
