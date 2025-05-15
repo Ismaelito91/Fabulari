@@ -286,7 +286,7 @@ const AvatarSelectionModal: React.FC<AvatarSelectionModalProps> = ({
               onPress={() => setSelectedType("boy")}
             >
               <Image
-                source={require("../assets/Chibi garçon.png")}
+                source={require("../assets/Chibi_garcon1.png")}
                 style={styles.avatarSelectionImage}
               />
               <Text style={styles.avatarSelectionText}>Garçon</Text>

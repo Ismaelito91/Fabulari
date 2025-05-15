@@ -6,12 +6,16 @@ interface AvatarProps {
   size?: number;
   showBorder?: boolean;
   avatarType?: string;
+  onlineAvatarUrl?: string;
+  isOnline?: boolean;
 }
 
 const DynamicAvatar: React.FC<AvatarProps> = ({
   size = 150,
   showBorder = false,
   avatarType: propAvatarType,
+  onlineAvatarUrl,
+  isOnline,
 }) => {
   const [avatarType, setAvatarType] = useState<string>(propAvatarType || "boy");
   const [isLoading, setIsLoading] = useState<boolean>(
@@ -74,16 +78,21 @@ const DynamicAvatar: React.FC<AvatarProps> = ({
     );
   }
 
-  // Sélectionner l'image d'avatar en fonction du type
-  const getAvatarImage = () => {
+  // Logique de sélection de l'image d'avatar
+  const getImageSource = () => {
+    if (avatarType === "boy" || avatarType === "undefined" || !avatarType) {
+      return isOnline
+        ? { uri: onlineAvatarUrl }
+        : require("../assets/Chibi_garcon1.png");
+    }
     return avatarType === "girl"
       ? require("../assets/Fille-1.png")
-      : require("../assets/Chibi garçon.png");
+      : require("../assets/Chibi_garcon1.png");
   };
 
   return (
     <Image
-      source={getAvatarImage()}
+      source={getImageSource()}
       style={{
         width: size,
         height: size,

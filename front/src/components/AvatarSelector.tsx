@@ -14,7 +14,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   onSelectAvatar,
 }) => {
   // Images des avatars
-  const boyAvatar = require("../assets/Chibi garçon.png");
+  const boyAvatar = require("../assets/Chibi_garcon1.png");
   const girlAvatar = require("../assets/Fille-1.png");
 
   return (
