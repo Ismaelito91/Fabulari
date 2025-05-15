@@ -1,13 +1,23 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import ProgressBar from '../components/ProgressBar';
-import UnlockableItems from '../components/UnlockableItems';
-import { useNavigation } from '@react-navigation/native';
-import DynamicAvatar from '../components/Avatar'; // Ajustez le chemin si nécessaire
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TextInput,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import ProgressBar from "../components/ProgressBar";
+import UnlockableItems from "../components/UnlockableItems";
+import { useNavigation } from "@react-navigation/native";
+import DynamicAvatar from "../components/Avatar"; // Ajustez le chemin si nécessaire
 
 // Import correct de l'icône des paramètres
-const settingsIcon = require('../assets/Fichier 3.png');
+const settingsIcon = require("../assets/Fichier 3.png");
 
 // Type pour les livres
 export interface Book {
@@ -43,75 +53,21 @@ interface UserData {
 export const allBooks: Book[] = [
   {
     id: "1",
-    title: "Le Petit Prince",
-    author: "Antoine de Saint-Exupéry",
-    cover: "https://m.media-amazon.com/images/I/81t2CVWEsUL._AC_UF1000,1000_QL80_.jpg",
+    title: "Fourth Wing",
+    author: "Rebecca Yarros",
+    cover: require("../assets/Fichier 28.png"),
   },
   {
     id: "2",
-    title: "1984",
-    author: "George Orwell",
-    cover: "https://m.media-amazon.com/images/I/71kxa1-0mfL.jpg",
+    title: "Le Pont Des Tempêtes",
+    author: "Danielle L. Jensen",
+    cover: require("../assets/Fichier 28.png"),
   },
   {
     id: "3",
-    title: "L'Étranger",
-    author: "Albert Camus",
-    cover: "https://m.media-amazon.com/images/I/51kP1d3xalL._SX324_BO1,204,203,200_.jpg",
-  },
-  {
-    id: "4",
-    title: "Les Misérables",
-    author: "Victor Hugo",
-    cover: "https://m.media-amazon.com/images/I/71wBcp3hLPL.jpg",
-  },
-  {
-    id: "5",
-    title: "Orgueil et Préjugés",
-    author: "Jane Austen",
-    cover: "https://m.media-amazon.com/images/I/81IYF5oN8rL.jpg",
-  },
-  {
-    id: "6",
-    title: "Le Seigneur des Anneaux",
-    author: "J.R.R. Tolkien",
-    cover: "https://m.media-amazon.com/images/I/91zr3c5bXkL.jpg",
-  },
-  {
-    id: "7",
-    title: "Harry Potter à l'école des sorciers",
-    author: "J.K. Rowling",
-    cover: "https://m.media-amazon.com/images/I/81YOuOGFCJL.jpg",
-  },
-  {
-    id: "8",
-    title: "La Peste",
-    author: "Albert Camus",
-    cover: "https://m.media-amazon.com/images/I/61Eq1oP9W0L.jpg",
-  },
-  {
-    id: "9",
-    title: "Le Comte de Monte-Cristo",
-    author: "Alexandre Dumas",
-    cover: "https://m.media-amazon.com/images/I/81Lr3RVx6HL.jpg",
-  },
-  {
-    id: "10",
-    title: "Fahrenheit 451",
-    author: "Ray Bradbury",
-    cover: "https://m.media-amazon.com/images/I/81GqtNbs+PL.jpg",
-  },
-  {
-    id: "11",
-    title: "Bel-Ami",
-    author: "Guy de Maupassant",
-    cover: "https://m.media-amazon.com/images/I/61FnE8U2HBL.jpg",
-  },
-  {
-    id: "12",
-    title: "Madame Bovary",
-    author: "Gustave Flaubert",
-    cover: "https://m.media-amazon.com/images/I/71UkZDPoTqL.jpg",
+    title: "Un palais d'épines et de roses",
+    author: "Sarah J. Maas",
+    cover: require("../assets/Fichier 28.png"),
   },
 ];
 
@@ -128,19 +84,88 @@ const initialAvatarData: AvatarData = {
   currentY: 0,
 };
 
-const allBooks: Book[] = [
-  { id: '1', title: 'Fourth Wing', author: 'Rebecca Yarros', cover: require('../assets/Fichier 28.png') },
-  { id: '2', title: 'Le Pont Des Tempêtes', author: 'Danielle L. Jensen', cover: require('../assets/Fichier 28.png') },
-  { id: '3', title: 'Un palais d\'épines et de roses', author: 'Sarah J. Maas', cover: require('../assets/Fichier 28.png') },
-];
+// Composant modal pour la modification du pseudo
+interface PseudoModalProps {
+  visible: boolean;
+  currentPseudo: string;
+  onSave: (newPseudo: string) => void;
+  onClose: () => void;
+}
+
+const PseudoModal: React.FC<PseudoModalProps> = ({
+  visible,
+  currentPseudo,
+  onSave,
+  onClose,
+}) => {
+  const [tempPseudo, setTempPseudo] = useState(currentPseudo);
+
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.centeredView}>
+        <View style={styles.modalView}>
+          <Text style={styles.modalTitle}>Modifier votre pseudo</Text>
+          <TextInput
+            style={styles.input}
+            onChangeText={setTempPseudo}
+            value={tempPseudo}
+            placeholder="Entrez votre nouveau pseudo"
+            maxLength={20}
+          />
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonCancel]}
+              onPress={onClose}
+            >
+              <Text style={styles.textStyle}>Annuler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonSave]}
+              onPress={() => onSave(tempPseudo)}
+            >
+              <Text style={styles.textStyle}>Enregistrer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+// Composant modal pour la sélection de livres
+interface BookSelectionModalProps {
+  visible: boolean;
+  onRequestClose: () => void;
+  children: React.ReactNode;
+}
+
+const BookSelectionModal: React.FC<BookSelectionModalProps> = ({
+  visible,
+  onRequestClose,
+  children,
+}) => {
+  return (
+    <Modal
+      animationType="slide"
+      transparent={false}
+      visible={visible}
+      onRequestClose={onRequestClose}
+    >
+      {children}
+    </Modal>
+  );
+};
 
 function ProfileScreen({ route }: { route: any }) {
   const [favoriteBooks, setFavoriteBooks] = useState<Book[]>(allBooks);
   const [modalVisible, setModalVisible] = useState(false);
   const [pseudoModalVisible, setPseudoModalVisible] = useState(false);
-  const [pseudo, setPseudo] = useState('Lecteur123');
-  const [tempPseudo, setTempPseudo] = useState('');
-  const [avatarData, setAvatarData] = useState<AvatarData>(initialAvatarData);
+  const [pseudo, setPseudo] = useState("Lecteur123");
   const navigation = useNavigation();
 
   // Fonction pour ajouter ou retirer un livre des favoris
@@ -151,22 +176,24 @@ function ProfileScreen({ route }: { route: any }) {
       if (favoriteBooks.length < 3) {
         setFavoriteBooks([...favoriteBooks, book]);
       } else {
-        Alert.alert('Limite atteinte', 'Vous pouvez sélectionner jusqu\'à 3 livres favoris.');
+        Alert.alert(
+          "Limite atteinte",
+          "Vous pouvez sélectionner jusqu'à 3 livres favoris."
+        );
       }
     }
   };
 
   const openPseudoModal = () => {
-    setTempPseudo(pseudo);
     setPseudoModalVisible(true);
   };
 
-  const savePseudo = () => {
-    if (tempPseudo.trim()) {
-      setPseudo(tempPseudo);
+  const savePseudo = (newPseudo: string) => {
+    if (newPseudo.trim()) {
+      setPseudo(newPseudo);
       setPseudoModalVisible(false);
     } else {
-      Alert.alert('Erreur', 'Le pseudo ne peut pas être vide');
+      Alert.alert("Erreur", "Le pseudo ne peut pas être vide");
     }
   };
 
@@ -176,13 +203,22 @@ function ProfileScreen({ route }: { route: any }) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profil</Text>
         <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => console.log('Options')}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => console.log("Options")}
+          >
             <Ionicons name="ellipsis-vertical" size={24} color="#777" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => console.log('Paramètres')}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => console.log("Paramètres")}
+          >
             <Image source={settingsIcon} style={styles.iconImage} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => console.log('Notifications')}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => console.log("Notifications")}
+          >
             <Ionicons name="notifications-outline" size={24} color="#777" />
           </TouchableOpacity>
         </View>
@@ -190,18 +226,28 @@ function ProfileScreen({ route }: { route: any }) {
 
       {/* PROFILE SECTION WITH EDITABLE PSEUDO */}
       <View style={styles.profileSection}>
-        <TouchableOpacity onPress={openPseudoModal} style={styles.pseudoContainer}>
+        <TouchableOpacity
+          onPress={openPseudoModal}
+          style={styles.pseudoContainer}
+        >
           <Text style={styles.profileTitle}>{pseudo}</Text>
-          <Ionicons name="pencil" size={16} color="#4CAF50" style={styles.editIcon} />
+          <Ionicons
+            name="pencil"
+            size={16}
+            color="#4CAF50"
+            style={styles.editIcon}
+          />
         </TouchableOpacity>
-        
+
         {/* Avatar avec bouton Vestiaire */}
         <View style={styles.avatarContainer}>
           <DynamicAvatar />
-          <TouchableOpacity style={styles.wardrobeButton} onPress={() => navigation.navigate('Vestiaire')}>
+          <TouchableOpacity
+            style={styles.wardrobeButton}
+            onPress={() => navigation.navigate("Vestiaire")}
+          >
             <Ionicons name="shirt-outline" size={22} color="white" />
           </TouchableOpacity>
-          {/* Pour lancer l app enleve touchableOpacity  */}
         </View>
       </View>
 
@@ -209,24 +255,33 @@ function ProfileScreen({ route }: { route: any }) {
       <View style={styles.booksSection}>
         <View style={styles.booksSectionHeader}>
           <Text style={styles.sectionTitle}>Mes livres préférés</Text>
-          <TouchableOpacity style={styles.modifyButton} onPress={() => setModalVisible(true)}>
+          <TouchableOpacity
+            style={styles.modifyButton}
+            onPress={() => setModalVisible(true)}
+          >
             <Text style={styles.modifyButtonText}>Modifier</Text>
           </TouchableOpacity>
         </View>
-        
+
         {/* Liste des livres favoris avec hauteur fixe */}
         <View style={styles.booksListContainer}>
           {favoriteBooks.map((item) => (
             <View key={item.id} style={styles.bookItem}>
               <Image source={item.cover} style={styles.bookCover} />
               <View style={styles.bookInfo}>
-                <Text style={styles.bookTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.author} numberOfLines={1}>de {item.author}</Text>
+                <Text style={styles.bookTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.author} numberOfLines={1}>
+                  de {item.author}
+                </Text>
               </View>
             </View>
           ))}
           {favoriteBooks.length === 0 && (
-            <Text style={styles.emptyText}>Aucun livre favori sélectionné.</Text>
+            <Text style={styles.emptyText}>
+              Aucun livre favori sélectionné.
+            </Text>
           )}
         </View>
       </View>
@@ -234,38 +289,46 @@ function ProfileScreen({ route }: { route: any }) {
       {/* PROGRESS BAR AND UNLOCKABLE ITEMS - Position absolue en bas */}
       <View style={styles.progressSection}>
         <View style={styles.progressContainer}>
-          <Ionicons name="heart" size={24} color="red" style={styles.heartIcon} />
+          <Ionicons
+            name="heart"
+            size={24}
+            color="red"
+            style={styles.heartIcon}
+          />
           <ProgressBar />
         </View>
-        <Text style={styles.unlockableTitle}>Vos prochains items à débloquer :</Text>
+        <Text style={styles.unlockableTitle}>
+          Vos prochains items à débloquer :
+        </Text>
         <UnlockableItems />
       </View>
 
       {/* Modal pour modifier le pseudo */}
-      <Modal
-        animationType="fade"
-        transparent={true}
+      <PseudoModal
         visible={pseudoModalVisible}
         currentPseudo={pseudo}
-        onSave={(newPseudo: string) => {
-          setPseudo(newPseudo);
-          setPseudoModalVisible(false);
-        }}
+        onSave={savePseudo}
         onClose={() => setPseudoModalVisible(false)}
       />
 
+      {/* Modal pour sélectionner les livres favoris */}
       <BookSelectionModal
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalContent}>
-          <Text style={styles.sectionTitle}>Ajouter un livre à mes favoris</Text>
-          
+          <Text style={styles.sectionTitle}>
+            Ajouter un livre à mes favoris
+          </Text>
+
           <FlatList
             data={allBooks}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <TouchableOpacity style={styles.bookItem} onPress={() => toggleFavorite(item)}>
+              <TouchableOpacity
+                style={styles.bookItem}
+                onPress={() => toggleFavorite(item)}
+              >
                 <Image source={item.cover} style={styles.bookCover} />
                 <View style={styles.bookInfo}>
                   <Text style={styles.bookTitle}>{item.title}</Text>
@@ -285,23 +348,23 @@ function ProfileScreen({ route }: { route: any }) {
             <Text style={styles.closeButtonText}>Fermer</Text>
           </TouchableOpacity>
         </View>
-      </Modal>
+      </BookSelectionModal>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
     backgroundColor: "#fff",
-    position: 'relative', // Pour positionner les éléments absolus
+    position: "relative", // Pour positionner les éléments absolus
   },
   centeredView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
   },
   header: {
     flexDirection: "row",
@@ -325,33 +388,33 @@ const styles = StyleSheet.create({
     height: 24,
   },
   profileSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   pseudoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 10,
   },
   profileTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   editIcon: {
     marginLeft: 8,
   },
   avatarContainer: {
     marginTop: 16,
-    alignItems: 'center',
-    position: 'relative',
+    alignItems: "center",
+    position: "relative",
   },
   wardrobeButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: -10,
     right: -10,
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     padding: 10,
     borderRadius: 50,
   },
@@ -359,69 +422,69 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   booksSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   modifyButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     padding: 5,
     borderRadius: 5,
   },
   modifyButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
   },
   booksListContainer: {
     marginTop: 10,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   bookItem: {
-    width: '30%',
-    marginRight: '5%',
+    width: "30%",
+    marginRight: "5%",
     marginBottom: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   bookCover: {
-    width: '100%',
+    width: "100%",
     height: 120,
-    resizeMode: 'cover',
+    resizeMode: "cover",
     borderRadius: 8,
   },
   bookInfo: {
     marginTop: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   bookTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   author: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   emptyText: {
     fontSize: 16,
-    color: '#888',
+    color: "#888",
   },
   progressSection: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
-    width: '100%',
-    backgroundColor: '#fff',
+    width: "100%",
+    backgroundColor: "#fff",
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#ccc',
+    borderTopColor: "#ccc",
   },
   progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 10,
   },
   heartIcon: {
@@ -429,63 +492,63 @@ const styles = StyleSheet.create({
   },
   unlockableTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 10,
   },
   modalContent: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   closeButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     padding: 10,
     borderRadius: 5,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
   },
   closeButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
   },
   modalView: {
     marginTop: 30,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     padding: 20,
     borderRadius: 10,
-    width: '80%',
+    width: "80%",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 15,
   },
   input: {
     height: 40,
-    borderColor: 'gray',
+    borderColor: "gray",
     borderWidth: 1,
     marginBottom: 20,
     paddingLeft: 10,
     borderRadius: 5,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   button: {
     padding: 10,
     borderRadius: 5,
-    width: '48%',
+    width: "48%",
   },
   buttonCancel: {
-    backgroundColor: '#ccc',
+    backgroundColor: "#ccc",
   },
   buttonSave: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
   },
   textStyle: {
-    color: 'white',
-    textAlign: 'center',
+    color: "white",
+    textAlign: "center",
   },
 });
 
