@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,17 @@ import {
   Alert,
   Modal,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ProgressBar from "../components/ProgressBar";
 import UnlockableItems from "../components/UnlockableItems";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, NavigationProp } from "@react-navigation/native";
 import DynamicAvatar from "../components/Avatar"; // Ajustez le chemin si nécessaire
+import { RootStackParamList } from "../types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_BASE_URL } from "../utils/authUtils";
 
 // Import correct de l'icône des paramètres
 const settingsIcon = require("../assets/Fichier 3.png");
@@ -25,6 +30,7 @@ export interface Book {
   title: string;
   author: string;
   cover: any; // Peut être remplacé par ImageSourcePropType si besoin
+  isLocal?: boolean; // Pour distinguer les images locales des URLs
 }
 
 // Type pour l'avatar
@@ -36,6 +42,7 @@ export interface AvatarData {
   eyes: string;
   outfit: string;
   accessories: string;
+  type: string; // "boy" ou "girl"
   currentX: number;
   currentY: number;
 }
@@ -46,28 +53,110 @@ interface UserData {
   name: string;
   email: string;
   createdAt?: string;
+  avatar?: AvatarData;
   [key: string]: any; // Pour les autres propriétés potentielles
 }
 
-// Données de livres (peut être déplacé plus tard)
+// Livres avec des URLs d'image
 export const allBooks: Book[] = [
   {
     id: "1",
-    title: "Fourth Wing",
-    author: "Rebecca Yarros",
-    cover: require("../assets/Fichier 28.png"),
+    title: "Le Petit Prince",
+    author: "Antoine de Saint-Exupéry",
+    cover: "https://m.media-amazon.com/images/I/71F0ceelpUL._SL1500_.jpg",
+    isLocal: false,
   },
   {
     id: "2",
-    title: "Le Pont Des Tempêtes",
-    author: "Danielle L. Jensen",
-    cover: require("../assets/Fichier 28.png"),
+    title: "1984",
+    author: "George Orwell",
+    cover:
+      "https://cdn.futura-sciences.com/buildsv6/images/mediumoriginal/4/3/9/439fd5bd7b_50154898_1984.jpg",
+    isLocal: false,
   },
   {
     id: "3",
+    title: "L'Étranger",
+    author: "Albert Camus",
+    cover:
+      "https://media.senscritique.com/media/000007143411/source_big/L_Etranger.jpg",
+    isLocal: false,
+  },
+  {
+    id: "4",
+    title: "Les Misérables",
+    author: "Victor Hugo",
+    cover:
+      "https://th.bing.com/th/id/R.647d0432f850e14dc7770c93d2b0292d?rik=Pym80KMav5OUvQ&pid=ImgRaw&r=0",
+    isLocal: false,
+  },
+  {
+    id: "5",
+    title: "Orgueil et Préjugés",
+    author: "Jane Austen",
+    cover:
+      "https://products-images.di-static.com/image/jane-austen-orgueil-et-prejuges/9791093835600-475x500-1.jpg",
+    isLocal: false,
+  },
+  {
+    id: "6",
+    title: "Le Seigneur des Anneaux",
+    author: "J.R.R. Tolkien",
+    cover:
+      "https://static.fnac-static.com/multimedia/images_produits/ZoomPE/8/2/7/9782266201728/tsp20130902084417/Le-Seigneur-des-anneaux.jpg",
+    isLocal: false,
+  },
+  {
+    id: "7",
+    title: "Harry Potter à l'école des sorciers",
+    author: "J.K. Rowling",
+    cover:
+      "https://cdn1.booknode.com/book_cover/5177/full/harry-potter-tome-1-harry-potter-a-lecole-des-sorciers-5176749.jpg",
+    isLocal: false,
+  },
+  {
+    id: "8",
+    title: "La Peste",
+    author: "Albert Camus",
+    cover: "https://cdn1.booknode.com/book_cover/603/full/la-peste-603432.jpg",
+    isLocal: false,
+  },
+  {
+    id: "9",
+    title: "Le Comte de Monte-Cristo",
+    author: "Alexandre Dumas",
+    cover:
+      "https://th.bing.com/th/id/OIP.xM7gIuT_qPgu8TYl51_DjAHaMM?cb=iwc2&rs=1&pid=ImgDetMain",
+    isLocal: false,
+  },
+  {
+    id: "10",
+    title: "Fahrenheit 451",
+    author: "Ray Bradbury",
+    cover:
+      "https://static.fnac-static.com/multimedia/Images/FR/NR/5c/b1/9a/10137948/1507-0/tsp20191031070825/Fahrenheit-451.jpg",
+    isLocal: false,
+  },
+  {
+    id: "11",
+    title: "Fourth Wing",
+    author: "Rebecca Yarros",
+    cover: require("../assets/Fichier 28.png"),
+    isLocal: true,
+  },
+  {
+    id: "12",
+    title: "Le Pont Des Tempêtes",
+    author: "Danielle L. Jensen",
+    cover: require("../assets/Fichier 28.png"),
+    isLocal: true,
+  },
+  {
+    id: "13",
     title: "Un palais d'épines et de roses",
     author: "Sarah J. Maas",
     cover: require("../assets/Fichier 28.png"),
+    isLocal: true,
   },
 ];
 
@@ -75,11 +164,12 @@ export const allBooks: Book[] = [
 const initialAvatarData: AvatarData = {
   id: 1,
   userId: 1,
-  hair: "style1",
-  face: "style1",
-  eyes: "blue",
-  outfit: "casual",
-  accessories: "glasses",
+  hair: "default",
+  face: "default",
+  eyes: "default",
+  outfit: "default",
+  accessories: "default",
+  type: "boy", // default avatar type
   currentX: 0,
   currentY: 0,
 };
@@ -161,12 +251,208 @@ const BookSelectionModal: React.FC<BookSelectionModalProps> = ({
   );
 };
 
+// Composant modal pour la sélection d'avatar
+interface AvatarSelectionModalProps {
+  visible: boolean;
+  currentAvatarType: string;
+  onSave: (type: string) => void;
+  onClose: () => void;
+}
+
+const AvatarSelectionModal: React.FC<AvatarSelectionModalProps> = ({
+  visible,
+  currentAvatarType,
+  onSave,
+  onClose,
+}) => {
+  const [selectedType, setSelectedType] = useState(currentAvatarType);
+
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.centeredView}>
+        <View style={[styles.modalView, { width: "90%" }]}>
+          <Text style={styles.modalTitle}>Choisir votre avatar</Text>
+          <View style={styles.avatarSelectionContainer}>
+            <TouchableOpacity
+              style={[
+                styles.avatarOption,
+                selectedType === "boy" && styles.selectedAvatarOption,
+              ]}
+              onPress={() => setSelectedType("boy")}
+            >
+              <Image
+                source={require("../assets/Chibi garçon.png")}
+                style={styles.avatarSelectionImage}
+              />
+              <Text style={styles.avatarSelectionText}>Garçon</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.avatarOption,
+                selectedType === "girl" && styles.selectedAvatarOption,
+              ]}
+              onPress={() => setSelectedType("girl")}
+            >
+              <Image
+                source={require("../assets/Fille-1.png")}
+                style={styles.avatarSelectionImage}
+              />
+              <Text style={styles.avatarSelectionText}>Fille</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonCancel]}
+              onPress={onClose}
+            >
+              <Text style={styles.textStyle}>Annuler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonSave]}
+              onPress={() => onSave(selectedType)}
+            >
+              <Text style={styles.textStyle}>Enregistrer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 function ProfileScreen({ route }: { route: any }) {
-  const [favoriteBooks, setFavoriteBooks] = useState<Book[]>(allBooks);
+  // Utiliser le type correct pour la navigation
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
+  const [favoriteBooks, setFavoriteBooks] = useState<Book[]>(
+    allBooks.slice(0, 3)
+  );
   const [modalVisible, setModalVisible] = useState(false);
   const [pseudoModalVisible, setPseudoModalVisible] = useState(false);
-  const [pseudo, setPseudo] = useState("Lecteur123");
-  const navigation = useNavigation();
+  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
+  const [pseudo, setPseudo] = useState<string>("");
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [avatar, setAvatar] = useState<AvatarData>(initialAvatarData);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Charger les données utilisateur au démarrage
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  // Fonction pour charger les données utilisateur
+  const loadUserData = async () => {
+    try {
+      setIsLoading(true);
+      const userDataStr = await AsyncStorage.getItem("userData");
+      const token = await AsyncStorage.getItem("userToken");
+
+      if (userDataStr) {
+        const parsedUserData = JSON.parse(userDataStr);
+        setUserData(parsedUserData);
+
+        // Vérifier si le nom est défini dans userData
+        if (parsedUserData.name) {
+          setPseudo(parsedUserData.name);
+          console.log(
+            "Nom d'utilisateur chargé depuis le stockage local:",
+            parsedUserData.name
+          );
+        } else {
+          // Utiliser une valeur par défaut si le nom n'est pas défini
+          setPseudo("Lecteur123");
+          console.log("Aucun nom trouvé, utilisation du nom par défaut");
+        }
+
+        // Obtenir les données utilisateur depuis le backend si un token est disponible
+        if (token && parsedUserData.id) {
+          try {
+            // Récupérer les données utilisateur complètes depuis le backend
+            const userResponse = await axios.get(
+              `${API_BASE_URL}/users/${parsedUserData.id}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+
+            // Si la réponse contient un nom d'utilisateur, le mettre à jour
+            if (userResponse.data && userResponse.data.name) {
+              setPseudo(userResponse.data.name);
+              console.log(
+                "Nom d'utilisateur récupéré depuis le backend:",
+                userResponse.data.name
+              );
+
+              // Mettre à jour les données utilisateur locales si le nom a changé
+              if (parsedUserData.name !== userResponse.data.name) {
+                const updatedUserData = {
+                  ...parsedUserData,
+                  name: userResponse.data.name,
+                };
+                setUserData(updatedUserData);
+                await AsyncStorage.setItem(
+                  "userData",
+                  JSON.stringify(updatedUserData)
+                );
+                console.log(
+                  "Données utilisateur mises à jour localement avec le nom du backend"
+                );
+              }
+            }
+
+            // Obtenir les données d'avatar de l'utilisateur
+            const avatarResponse = await axios.get(
+              `${API_BASE_URL}/users/${parsedUserData.id}/avatar`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+
+            if (avatarResponse.data && avatarResponse.data.avatar) {
+              setAvatar(avatarResponse.data.avatar);
+              console.log("Avatar récupéré depuis le backend");
+            } else if (parsedUserData.avatar) {
+              // Utiliser l'avatar stocké localement si disponible
+              setAvatar(parsedUserData.avatar);
+              console.log("Avatar chargé depuis le stockage local");
+            }
+          } catch (error) {
+            console.error(
+              "Erreur lors de la récupération des données utilisateur:",
+              error
+            );
+            // Continuer à utiliser les données locales en cas d'erreur
+            if (parsedUserData.avatar) {
+              setAvatar(parsedUserData.avatar);
+            }
+          }
+        } else if (parsedUserData.avatar) {
+          // Utiliser l'avatar stocké localement si disponible mais pas de token
+          setAvatar(parsedUserData.avatar);
+        }
+      } else {
+        // Aucune donnée utilisateur trouvée
+        setPseudo("Lecteur123");
+        console.log(
+          "Aucune donnée utilisateur trouvée, utilisation des valeurs par défaut"
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Erreur lors du chargement des données utilisateur:",
+        error
+      );
+      // En cas d'erreur, utiliser des valeurs par défaut
+      setPseudo("Lecteur123");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Fonction pour ajouter ou retirer un livre des favoris
   const toggleFavorite = (book: Book) => {
@@ -188,14 +474,103 @@ function ProfileScreen({ route }: { route: any }) {
     setPseudoModalVisible(true);
   };
 
-  const savePseudo = (newPseudo: string) => {
+  const savePseudo = async (newPseudo: string) => {
     if (newPseudo.trim()) {
       setPseudo(newPseudo);
       setPseudoModalVisible(false);
+
+      // Mettre à jour les données utilisateur localement
+      if (userData) {
+        const updatedUserData = { ...userData, name: newPseudo };
+        setUserData(updatedUserData);
+        await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
+
+        // Si un token est disponible, mettre à jour le pseudo sur le backend
+        const token = await AsyncStorage.getItem("userToken");
+        if (token && userData.id) {
+          try {
+            await axios.put(
+              `${API_BASE_URL}/users/${userData.id}`,
+              { name: newPseudo },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } catch (error) {
+            console.error("Erreur lors de la mise à jour du pseudo:", error);
+          }
+        }
+      }
     } else {
       Alert.alert("Erreur", "Le pseudo ne peut pas être vide");
     }
   };
+
+  const openAvatarModal = () => {
+    setAvatarModalVisible(true);
+  };
+
+  const saveAvatar = async (avatarType: string) => {
+    try {
+      // Mettre à jour l'avatar localement
+      const updatedAvatar = { ...avatar, type: avatarType };
+      setAvatar(updatedAvatar);
+      setAvatarModalVisible(false);
+
+      // Mettre à jour l'avatar dans les données utilisateur
+      if (userData) {
+        const updatedUserData = { ...userData, avatar: updatedAvatar };
+        setUserData(updatedUserData);
+        await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
+
+        // Si un token est disponible, mettre à jour l'avatar sur le backend
+        const token = await AsyncStorage.getItem("userToken");
+        if (token && userData.id) {
+          try {
+            await axios.put(
+              `${API_BASE_URL}/users/${userData.id}/avatar`,
+              { avatar: updatedAvatar },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } catch (error) {
+            console.error("Erreur lors de la mise à jour de l'avatar:", error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde de l'avatar:", error);
+      Alert.alert(
+        "Erreur",
+        "Une erreur est survenue lors de la sauvegarde de l'avatar."
+      );
+    }
+  };
+
+  // Fonction pour afficher une image en fonction de son type (locale ou URL)
+  const renderBookCover = (book: Book) => {
+    if (book.isLocal) {
+      // Image locale
+      return <Image source={book.cover} style={styles.bookCover} />;
+    } else {
+      // URL d'image
+      return (
+        <Image
+          source={{ uri: book.cover as string }}
+          style={styles.bookCover}
+          // Ajouter un placeholder en cas d'échec de chargement
+          defaultSource={require("../assets/Fichier 28.png")}
+        />
+      );
+    }
+  };
+
+  // Afficher un indicateur de chargement si les données sont en cours de chargement
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centeredContent]}>
+        <ActivityIndicator size="large" color="#2D5A5A" />
+        <Text style={styles.loadingText}>Chargement du profil...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -241,7 +616,15 @@ function ProfileScreen({ route }: { route: any }) {
 
         {/* Avatar avec bouton Vestiaire */}
         <View style={styles.avatarContainer}>
-          <DynamicAvatar />
+          <TouchableOpacity
+            onPress={openAvatarModal}
+            style={styles.avatarWrapper}
+          >
+            <DynamicAvatar avatarType={avatar.type} size={180} />
+            <View style={styles.editAvatarBadge}>
+              <Ionicons name="pencil" size={16} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.wardrobeButton}
             onPress={() => navigation.navigate("Vestiaire")}
@@ -267,7 +650,7 @@ function ProfileScreen({ route }: { route: any }) {
         <View style={styles.booksListContainer}>
           {favoriteBooks.map((item) => (
             <View key={item.id} style={styles.bookItem}>
-              <Image source={item.cover} style={styles.bookCover} />
+              {renderBookCover(item)}
               <View style={styles.bookInfo}>
                 <Text style={styles.bookTitle} numberOfLines={1}>
                   {item.title}
@@ -311,6 +694,14 @@ function ProfileScreen({ route }: { route: any }) {
         onClose={() => setPseudoModalVisible(false)}
       />
 
+      {/* Modal pour sélectionner l'avatar */}
+      <AvatarSelectionModal
+        visible={avatarModalVisible}
+        currentAvatarType={avatar.type}
+        onSave={saveAvatar}
+        onClose={() => setAvatarModalVisible(false)}
+      />
+
       {/* Modal pour sélectionner les livres favoris */}
       <BookSelectionModal
         visible={modalVisible}
@@ -329,7 +720,7 @@ function ProfileScreen({ route }: { route: any }) {
                 style={styles.bookItem}
                 onPress={() => toggleFavorite(item)}
               >
-                <Image source={item.cover} style={styles.bookCover} />
+                {renderBookCover(item)}
                 <View style={styles.bookInfo}>
                   <Text style={styles.bookTitle}>{item.title}</Text>
                   <Text style={styles.author}>de {item.author}</Text>
@@ -359,6 +750,15 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#fff",
     position: "relative", // Pour positionner les éléments absolus
+  },
+  centeredContent: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666666",
   },
   centeredView: {
     flex: 1,
@@ -409,6 +809,23 @@ const styles = StyleSheet.create({
     marginTop: 16,
     alignItems: "center",
     position: "relative",
+    marginBottom: 30, // Augmenté pour laisser de l'espace pour l'avatar plus grand
+  },
+  avatarWrapper: {
+    position: "relative",
+  },
+  editAvatarBadge: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    backgroundColor: "#4CAF50",
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
   wardrobeButton: {
     position: "absolute",
@@ -417,6 +834,32 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
     padding: 10,
     borderRadius: 50,
+  },
+  avatarSelectionContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginBottom: 20,
+  },
+  avatarOption: {
+    padding: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    borderColor: "transparent",
+  },
+  selectedAvatarOption: {
+    borderColor: "#2D5A5A",
+    backgroundColor: "rgba(45, 90, 90, 0.1)",
+  },
+  avatarSelectionImage: {
+    width: 100,
+    height: 100,
+    resizeMode: "contain",
+  },
+  avatarSelectionText: {
+    marginTop: 5,
+    fontSize: 16,
+    fontWeight: "bold",
   },
   booksSection: {
     marginBottom: 20,

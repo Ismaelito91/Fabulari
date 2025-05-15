@@ -52,7 +52,7 @@ const BookSelectionModal: React.FC<BookSelectionModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.modalContent}>
-        <Text style={styles.sectionTitle}>Ajouter un livre à mes favoris</Text>
+        <Text style={styles.sectionTitle}>liste des Livres</Text>
 
         <FlatList
           data={allBooks}

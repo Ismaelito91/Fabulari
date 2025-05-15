@@ -22,7 +22,7 @@ const getApiBaseUrl = () => {
   }
 };
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
 
 // Liste locale des pseudos utilisés (pour simulation sans serveur)
 let usedUsernames: string[] = [];
@@ -231,7 +231,57 @@ export const login = async (
 
         // Stocker les infos utilisateur si nécessaire
         if (data.user) {
+          // S'assurer que l'utilisateur a un nom
+          if (!data.user.name && data.user.username) {
+            data.user.name = data.user.username;
+          }
+
           await AsyncStorage.setItem("userData", JSON.stringify(data.user));
+          console.log(
+            "Données utilisateur stockées après connexion:",
+            data.user
+          );
+        } else {
+          // Si le serveur n'a pas renvoyé de données utilisateur, essayer de les récupérer
+          try {
+            // Configurer l'en-tête d'autorisation
+            axios.defaults.headers.common[
+              "Authorization"
+            ] = `Bearer ${data.token}`;
+
+            // Récupérer les informations utilisateur
+            const userResponse = await axios.get(`${API_BASE_URL}/auth/me`);
+
+            if (userResponse.data && userResponse.data.user) {
+              const userData = userResponse.data.user;
+
+              // S'assurer que l'utilisateur a un nom
+              if (!userData.name && userData.username) {
+                userData.name = userData.username;
+              }
+
+              await AsyncStorage.setItem("userData", JSON.stringify(userData));
+              console.log(
+                "Données utilisateur récupérées après connexion:",
+                userData
+              );
+            }
+          } catch (userError) {
+            console.error(
+              "Erreur lors de la récupération des données utilisateur:",
+              userError
+            );
+            // Si on ne peut pas récupérer les données, créer un minimum
+            const minimalUserData = {
+              id: `user-${Date.now()}`,
+              name: email.split("@")[0], // Utiliser la partie locale de l'email comme pseudo par défaut
+              email: email,
+            };
+            await AsyncStorage.setItem(
+              "userData",
+              JSON.stringify(minimalUserData)
+            );
+          }
         }
         return true;
       } else {
@@ -374,7 +424,7 @@ export const register = async (
         // Stocker les informations de l'utilisateur même si le serveur ne les renvoie pas
         const userData = data.user || {
           id: data.userId || "temp-user-id",
-          name: name,
+          name: name, // S'assurer que le nom est bien stocké
           email: email,
           avatar: {
             type: avatarType,
@@ -385,6 +435,11 @@ export const register = async (
           },
           createdAt: new Date().toISOString(),
         };
+
+        // S'assurer que userData contient bien le nom
+        if (!userData.name) {
+          userData.name = name;
+        }
 
         await AsyncStorage.setItem("userData", JSON.stringify(userData));
         console.log("Données utilisateur stockées:", userData);
@@ -409,7 +464,7 @@ export const register = async (
     // Stocker des informations minimales sur l'utilisateur
     const tempUserData = {
       id: `user-${Date.now()}`,
-      name: name,
+      name: name, // S'assurer que le nom est bien stocké
       email: email,
       avatar: {
         type: avatarType,
