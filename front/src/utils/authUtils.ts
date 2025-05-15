@@ -313,10 +313,15 @@ export const login = async (
 export const register = async (
   name: string,
   email: string,
-  password: string
+  password: string,
+  avatarType: string = "boy" // "boy" ou "girl"
 ): Promise<boolean> => {
   try {
-    console.log("Tentative d'inscription avec:", { username: name, email });
+    console.log("Tentative d'inscription avec:", {
+      username: name,
+      email,
+      avatarType,
+    });
 
     // Vérifier si le pseudo est déjà utilisé
     const usernameTaken = await isUsernameTaken(name);
@@ -334,7 +339,18 @@ export const register = async (
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username: name, email, password }),
+        body: JSON.stringify({
+          username: name,
+          email,
+          password,
+          avatar: {
+            type: avatarType,
+            // Valeurs par défaut pour l'avatar
+            hair: "default",
+            face: "default",
+            outfit: "default",
+          },
+        }),
       });
 
       console.log("Réponse du serveur:", response);
@@ -360,6 +376,13 @@ export const register = async (
           id: data.userId || "temp-user-id",
           name: name,
           email: email,
+          avatar: {
+            type: avatarType,
+            // Autres propriétés par défaut
+            hair: "default",
+            face: "default",
+            outfit: "default",
+          },
           createdAt: new Date().toISOString(),
         };
 
@@ -388,6 +411,12 @@ export const register = async (
       id: `user-${Date.now()}`,
       name: name,
       email: email,
+      avatar: {
+        type: avatarType,
+        hair: "default",
+        face: "default",
+        outfit: "default",
+      },
       createdAt: new Date().toISOString(),
     };
 

@@ -15,6 +15,7 @@ import {
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../types";
 import { register, isUsernameTaken } from "../utils/authUtils";
+import AvatarSelector, { AvatarType } from "../components/AvatarSelector";
 
 type RegisterScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, "Register">;
@@ -25,6 +26,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarType>("boy"); // Par défaut "boy"
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
@@ -96,8 +98,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
     try {
       console.log("Début de l'inscription...");
-      // Appel à la fonction d'inscription réelle
-      const success = await register(name, email, password);
+      console.log("Avatar sélectionné:", selectedAvatar);
+      // Appel à la fonction d'inscription réelle avec l'avatar
+      const success = await register(name, email, password, selectedAvatar);
       console.log("Résultat de l'inscription:", success);
 
       if (success) {
@@ -138,6 +141,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         )}
 
         <View style={styles.formContainer}>
+          {/* Sélecteur d'avatar */}
+          <AvatarSelector
+            selectedAvatar={selectedAvatar}
+            onSelectAvatar={setSelectedAvatar}
+          />
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Pseudo</Text>
             <View style={styles.usernameInputContainer}>
