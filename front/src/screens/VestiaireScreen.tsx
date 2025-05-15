@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Type pour les catégories de vêtements
@@ -140,10 +140,6 @@ const VestiaireScreen = ({ navigation, route }: { navigation: any, route: any })
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#777" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Vestiaire</Text>
         <TouchableOpacity onPress={saveChanges} style={styles.saveButton}>
           <Ionicons name="save-outline" size={18} color="white" />
           <Text style={styles.saveButtonText}>Enregistrer</Text>
@@ -156,7 +152,7 @@ const VestiaireScreen = ({ navigation, route }: { navigation: any, route: any })
         </TouchableOpacity>
 
         <View style={styles.avatarContainer}>
-          <DynamicAvatar />
+          
         </View>
 
         <TouchableOpacity onPress={() => rotateAvatar('right')} style={styles.rotateButton}>

@@ -6,8 +6,8 @@ import { createStackNavigator } from "@react-navigation/stack";
 import HomeScreen from "./src/screens/HomeScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import RegisterScreen from "./src/screens/RegisterScreen";
-import RoomsScreen from "./src/screens/RoomsScreen";
-import ChatScreen from "./src/screens/ChatScreen";
+//import RoomsScreen from "./src/screens/RoomsScreen";
+//import ChatScreen from "./src/screens/ChatScreen";
 
 type RootStackParamList = {
   Home: undefined;
@@ -45,12 +45,12 @@ export default function App() {
           component={RegisterScreen}
           options={{ title: "Inscription" }}
         />
-        <Stack.Screen
+        {/* <Stack.Screen
           name="Rooms"
           component={RoomsScreen}
           options={{ title: "Salles" }}
         />
-        <Stack.Screen name="Chat" component={ChatScreen} />
+        <Stack.Screen name="Chat" component={ChatScreen} /> */}
 
 
 
