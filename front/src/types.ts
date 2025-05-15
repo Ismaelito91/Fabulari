@@ -1,15 +1,13 @@
 export type RootStackParamList = {
-  Splash: undefined;
+  Home: undefined;
   Login: undefined;
   Register: undefined;
-  Home: undefined;
+  ProfileScreen: undefined;
   BookList: undefined;
   SwipeList: undefined;
-  ProfileScreen: undefined;
-  Vestiaire: undefined;
-  ChatRoom: {
-    roomId: string;
-    roomName: string;
-  };
   FavoriteBooks: undefined;
+  Vestiaire: undefined;
+  ChatRoom: { roomId: string | number; roomName: string };
+  Splash: undefined;
+  Logout: undefined;
 };

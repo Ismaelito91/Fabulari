@@ -1,8 +1,9 @@
-import { registerRootComponent } from 'expo';
+import { registerRootComponent } from "expo";
 
-import App from './App';
-import HomeScreen from './src/screens/HomeScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
-import Navigation from './Navigation';
+import App from "./App";
+import HomeScreen from "./src/screens/HomeScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
+import Navigation from "./Navigation";
 
-registerRootComponent(Navigation);
+// Enregistrer App comme composant racine
+registerRootComponent(App);

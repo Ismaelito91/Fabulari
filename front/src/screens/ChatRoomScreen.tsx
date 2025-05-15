@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   TextInput,
@@ -10,25 +9,35 @@ import {
   Platform,
   ActivityIndicator,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import Icon from "react-native-vector-icons/Ionicons"; // Assurez-vous d'installer cette dépendance
+import Icon from "react-native-vector-icons/Ionicons";
+import io from "socket.io-client";
+import { FONTS } from "../constants/fonts";
+import {
+  setupAuthorizationHeader,
+  getWorkingApiEndpoint,
+} from "../utils/authUtils";
+import DefaultText from "../components/DefaultText";
 
 // URL de base de l'API (à configurer selon votre environnement)
-const API_BASE_URL = "http://localhost:3000/api"; // ou l'URL de votre API
+const API_BASE_URL = "http://localhost:3001/api";
+const SOCKET_URL = "http://localhost:3001";
 
 // Type pour les messages
 type Message = {
   id: string;
-  text: string;
+  content: string;
   userId: string;
-  userName: string;
+  userName?: string;
   timestamp: string;
   isCurrentUser: boolean;
+  sendFailed?: boolean;
 };
 
 // Props de l'écran
@@ -37,11 +46,16 @@ type ChatRoomScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, "ChatRoom">;
 };
 
-const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({
+// Définition du composant sans utiliser React.FC
+export default function ChatRoomScreen({
   route,
   navigation,
-}) => {
-  const { roomId, roomName } = route.params;
+}: ChatRoomScreenProps) {
+  const { roomId: roomIdParam, roomName } = route.params;
+  // Convertir l'ID en nombre si c'est une chaîne
+  const roomId =
+    typeof roomIdParam === "string" ? parseInt(roomIdParam, 10) : roomIdParam;
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -50,8 +64,79 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({
     id: string;
     name: string;
   } | null>(null);
+  const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(
+    new Set()
+  );
 
   const flatListRef = useRef<FlatList>(null);
+  const socketRef = useRef<any>(null);
+
+  // Charger les messages du salon
+  const loadMessages = async (userData: any) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Configuration des en-têtes d'autorisation
+      await setupAuthorizationHeader();
+
+      // Récupérer à nouveau le token pour être sûr
+      const token = await AsyncStorage.getItem("userToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      console.log(`Tentative d'accès aux messages pour le salon: ${roomId}`);
+      const response = await getWorkingApiEndpoint(
+        `/chat/rooms/${roomId}/messages`,
+        "GET",
+        token,
+        undefined,
+        navigation
+      );
+
+      console.log("Réponse API messages (status):", response.status);
+
+      if (!response.ok) {
+        // Tenter de lire le corps de la réponse d'erreur
+        const errorBody = await response.text();
+        console.error("Erreur API messages:", response.status, errorBody);
+        throw new Error(`Erreur HTTP: ${response.status}. ${errorBody}`);
+      }
+
+      const data = await response.json();
+      console.log("Données reçues:", data ? "Disponibles" : "Vides");
+
+      // Vérification des données
+      if (!data || !data.messages || !Array.isArray(data.messages)) {
+        console.error("Format de données invalide:", data);
+        throw new Error("Format de données invalide");
+      }
+
+      // Traitement des messages reçus
+      const messagesWithUser = data.messages.map((msg: any) => ({
+        id: msg.id.toString(),
+        content: msg.content,
+        userId: msg.userId.toString(),
+        userName: msg.User ? msg.User.username : "Inconnu",
+        timestamp: msg.createdAt,
+        isCurrentUser: msg.userId.toString() === userData?.id,
+      }));
+
+      setMessages(messagesWithUser);
+
+      // Enregistrer les IDs des messages déjà traités
+      const ids = new Set<string>();
+      messagesWithUser.forEach((msg: Message) => {
+        ids.add(msg.id);
+      });
+      setProcessedMessageIds(ids);
+
+      setIsLoading(false);
+    } catch (error: any) {
+      console.error("Erreur globale:", error);
+      setError("Une erreur inattendue est survenue. Veuillez réessayer.");
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Configurer la navigation
@@ -73,99 +158,104 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({
             id: userData.id || "temp-user-id",
             name: userData.name || "Utilisateur",
           });
+          return userData;
         }
+        return null;
       } catch (err) {
         console.error(
           "Erreur lors de la récupération des infos utilisateur:",
           err
         );
+        return null;
       }
     };
 
-    // Charger les messages du salon
-    const loadMessages = async () => {
+    // Initialiser Socket.IO
+    const setupSocket = (userData: any) => {
       try {
-        setIsLoading(true);
+        // Connexion au serveur Socket.IO
+        const socket = io(SOCKET_URL);
+        socketRef.current = socket;
 
-        // Récupérer le token d'authentification
-        const userToken = await AsyncStorage.getItem("userToken");
+        // Événements Socket.IO
+        socket.on("connect", () => {
+          console.log("Connecté au serveur Socket.IO");
+          socket.emit("join_room", roomId);
+        });
 
-        // Configuration des en-têtes pour les requêtes API
-        const headers = userToken
-          ? { Authorization: `Bearer ${userToken}` }
-          : {};
+        socket.on("receive_message", (messageData: any) => {
+          // Vérifier si nous avons déjà traité ce message
+          if (processedMessageIds.has(messageData.id.toString())) {
+            return;
+          }
 
-        // Appel à l'API pour récupérer les messages
-        // Décommentez cette section lorsque votre API est prête
-        /*
-        const response = await axios.get(
-          `${API_BASE_URL}/chatrooms/${roomId}/messages`, 
-          { headers }
-        );
-        
-        // Traitement des messages reçus
-        const messagesWithUser = response.data.map(msg => ({
-          ...msg,
-          isCurrentUser: msg.userId === currentUser?.id
-        }));
-        
-        setMessages(messagesWithUser);
-        */
+          // Vérifier si ce message est de l'utilisateur actuel
+          const isFromCurrentUser =
+            messageData.userId.toString() === userData?.id;
 
-        // Données fictives pour le développement
-        setMessages([
-          {
-            id: "1",
-            text: "Bonjour et bienvenue dans ce salon de discussion !",
-            userId: "admin",
-            userName: "Administrateur",
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            isCurrentUser: false,
-          },
-          {
-            id: "2",
-            text: "Merci ! Je suis ravi de rejoindre cette communauté.",
-            userId: "temp-user-id",
-            userName: "Vous",
-            timestamp: new Date(Date.now() - 1800000).toISOString(),
-            isCurrentUser: true,
-          },
-          {
-            id: "3",
-            text: "Quelqu'un a-t-il lu le dernier roman de Marc Levy ?",
-            userId: "user2",
-            userName: "Sophie",
-            timestamp: new Date(Date.now() - 900000).toISOString(),
-            isCurrentUser: false,
-          },
-          {
-            id: "4",
-            text: "Je suis en train de le lire, c'est passionnant !",
-            userId: "user3",
-            userName: "Thomas",
-            timestamp: new Date(Date.now() - 600000).toISOString(),
-            isCurrentUser: false,
-          },
-        ]);
+          // Si c'est un message de l'utilisateur actuel, vérifier s'il est déjà affiché
+          if (isFromCurrentUser) {
+            const messageExists = messages.some(
+              (msg) => msg.content === messageData.content && msg.isCurrentUser
+            );
+            if (messageExists) {
+              return;
+            }
+          }
 
-        setIsLoading(false);
+          const newMessage = {
+            id: messageData.id.toString(),
+            content: messageData.content,
+            userId: messageData.userId.toString(),
+            userName: messageData.userName || "Inconnu",
+            timestamp: messageData.timestamp || new Date().toISOString(),
+            isCurrentUser: isFromCurrentUser,
+          };
+
+          // Ajouter l'ID à la liste des messages traités
+          setProcessedMessageIds((prev) =>
+            new Set(prev).add(messageData.id.toString())
+          );
+
+          setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+          // Scroll to bottom on new message
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        });
+
+        socket.on("disconnect", () => {
+          console.log("Déconnecté du serveur Socket.IO");
+        });
+
+        socket.on("error", (error: any) => {
+          console.error("Erreur Socket.IO:", error);
+        });
+
+        return socket;
       } catch (err) {
-        console.error("Erreur lors du chargement des messages:", err);
-        setError("Impossible de charger les messages pour le moment.");
-        setIsLoading(false);
+        console.error("Erreur lors de l'initialisation de Socket.IO:", err);
+        return null;
       }
     };
 
-    getUserInfo().then(loadMessages);
+    // Initialisation
+    const initialize = async () => {
+      const userData = await getUserInfo();
+      await loadMessages(userData);
+      setupSocket(userData);
+    };
 
-    // Configurer une connexion WebSocket en temps réel (à implémenter plus tard)
-    // const socket = io(`${API_BASE_URL}/chatrooms/${roomId}`);
+    initialize();
 
     // Nettoyer les ressources à la fermeture
     return () => {
-      // socket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
     };
-  }, [roomId, roomName, navigation]);
+  }, [roomId, roomName, navigation, processedMessageIds]);
 
   // Fonction pour envoyer un nouveau message
   const sendMessage = async () => {
@@ -176,7 +266,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({
     // Créer un message temporaire
     const tempMessage: Message = {
       id: tempId,
-      text: newMessage,
+      content: newMessage,
       userId: currentUser.id,
       userName: currentUser.name,
       timestamp: new Date().toISOString(),
@@ -196,31 +286,136 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({
       // Récupérer le token d'authentification
       const userToken = await AsyncStorage.getItem("userToken");
 
-      // Configuration des en-têtes pour les requêtes API
-      const headers = userToken ? { Authorization: `Bearer ${userToken}` } : {};
+      if (!userToken) {
+        // Gérer l'échec de l'envoi
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) =>
+            msg.id === tempId ? { ...msg, sendFailed: true } : msg
+          )
+        );
 
-      // Envoyer le message au serveur
-      // Décommentez cette section lorsque votre API est prête
-      /*
-      const response = await axios.post(
-        `${API_BASE_URL}/chatrooms/${roomId}/messages`,
-        { text: newMessage },
-        { headers }
-      );
-      
-      // Mettre à jour le message avec les informations du serveur
-      const serverMessage = response.data;
-      
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.id === tempId ? { ...serverMessage, isCurrentUser: true } : msg
-        )
-      );
-      */
+        // Proposer à l'utilisateur de se connecter ou s'inscrire
+        Alert.alert(
+          "Connexion requise",
+          "Vous devez être connecté pour envoyer des messages",
+          [
+            { text: "Annuler", style: "cancel" },
+            {
+              text: "Se connecter",
+              onPress: () => navigation.navigate("Login"),
+            },
+            {
+              text: "S'inscrire",
+              onPress: () => navigation.navigate("Register"),
+            },
+          ]
+        );
+        return;
+      }
+
+      try {
+        // Envoyer le message en utilisant notre fonction améliorée
+        const response = await getWorkingApiEndpoint(
+          `/chat/rooms/${roomId}/messages`,
+          "POST",
+          userToken,
+          JSON.stringify({ content: newMessage }),
+          navigation
+        );
+
+        // Vérifier si nous avons une erreur 401
+        if (response.status === 401) {
+          // La fonction getWorkingApiEndpoint a déjà géré la redirection
+          // Marquer le message comme échoué
+          setMessages((prevMessages) =>
+            prevMessages.map((msg) =>
+              msg.id === tempId ? { ...msg, sendFailed: true } : msg
+            )
+          );
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+
+        // Récupérer la réponse
+        const serverMessage = await response.json();
+
+        // Mettre à jour le message avec les informations du serveur
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) =>
+            msg.id === tempId
+              ? {
+                  ...serverMessage,
+                  isCurrentUser: true,
+                  content: serverMessage.content || msg.content,
+                  userName: serverMessage.userName || currentUser.name,
+                }
+              : msg
+          )
+        );
+
+        // Émettre le message via Socket.IO
+        if (socketRef.current) {
+          socketRef.current.emit("send_message", {
+            roomId,
+            ...serverMessage,
+            userName: currentUser.name,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } catch (apiError: any) {
+        console.error("Erreur API lors de l'envoi du message:", apiError);
+
+        // Vérifier s'il s'agit d'une erreur d'authentification
+        if (
+          apiError.response &&
+          (apiError.response.status === 401 ||
+            apiError.response.status === 403 ||
+            (apiError.response.data.message &&
+              apiError.response.data.message.includes("trouvé")))
+        ) {
+          setError("Authentification requise. Veuillez vous reconnecter.");
+
+          // Marquer le message comme échoué
+          setMessages((prevMessages) =>
+            prevMessages.map((msg) =>
+              msg.id === tempId ? { ...msg, sendFailed: true } : msg
+            )
+          );
+
+          // Tentative de redirection vers la connexion après un court délai
+          setTimeout(() => {
+            navigation.navigate("Login");
+          }, 2000);
+
+          return;
+        }
+
+        // Si l'API échoue mais que socket.io est disponible, on peut quand même tenter d'envoyer
+        if (socketRef.current) {
+          socketRef.current.emit("send_message", {
+            roomId,
+            id: tempId,
+            content: newMessage,
+            userId: currentUser.id,
+            userName: currentUser.name,
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          // Marquer le message comme échoué
+          setMessages((prevMessages) =>
+            prevMessages.map((msg) =>
+              msg.id === tempId ? { ...msg, sendFailed: true } : msg
+            )
+          );
+        }
+      }
     } catch (err) {
       console.error("Erreur lors de l'envoi du message:", err);
 
-      // Gérer l'échec de l'envoi (optionnel: marquer le message comme échoué)
+      // Gérer l'échec de l'envoi
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
           msg.id === tempId ? { ...msg, sendFailed: true } : msg
@@ -246,7 +441,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({
       ]}
     >
       {!item.isCurrentUser && (
-        <Text style={styles.messageSender}>{item.userName}</Text>
+        <DefaultText style={styles.messageSender}>{item.userName}</DefaultText>
       )}
       <View
         style={[
@@ -254,11 +449,40 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({
           item.isCurrentUser
             ? styles.userMessageBubble
             : styles.otherMessageBubble,
+          item.sendFailed && styles.failedMessageBubble,
         ]}
       >
-        <Text style={styles.messageText}>{item.text}</Text>
+        <DefaultText
+          style={[
+            styles.messageText,
+            item.isCurrentUser && styles.userMessageText,
+            item.sendFailed && styles.failedMessageText,
+          ]}
+        >
+          {item.content}
+        </DefaultText>
       </View>
-      <Text style={styles.messageTime}>{formatTime(item.timestamp)}</Text>
+      <View style={styles.messageFooter}>
+        <DefaultText style={styles.messageTime}>
+          {formatTime(item.timestamp)}
+        </DefaultText>
+        {item.sendFailed && (
+          <TouchableOpacity
+            onPress={() => {
+              // Tenter de renvoyer le message
+              const messageContent = item.content;
+              // Supprimer le message échoué
+              setMessages((prevMessages) =>
+                prevMessages.filter((msg) => msg.id !== item.id)
+              );
+              // Réinitialiser le champ de texte avec le contenu du message échoué
+              setNewMessage(messageContent);
+            }}
+          >
+            <DefaultText style={styles.retryText}>Réessayer</DefaultText>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 
@@ -267,7 +491,9 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({
     return (
       <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color="#2D5A5A" />
-        <Text style={styles.loaderText}>Chargement des messages...</Text>
+        <DefaultText style={styles.loaderText}>
+          Chargement des messages...
+        </DefaultText>
       </View>
     );
   }
@@ -276,16 +502,23 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
+        <DefaultText style={styles.errorText}>{error}</DefaultText>
         <TouchableOpacity
           style={styles.retryButton}
           onPress={() => {
             setIsLoading(true);
             setError(null);
-            // Recharger les messages...
+            // Recharger les messages
+            const reloadMessages = async () => {
+              const userData = await AsyncStorage.getItem("userData");
+              if (userData) {
+                await loadMessages(JSON.parse(userData));
+              }
+            };
+            reloadMessages();
           }}
         >
-          <Text style={styles.retryButtonText}>Réessayer</Text>
+          <DefaultText style={styles.retryButtonText}>Réessayer</DefaultText>
         </TouchableOpacity>
       </View>
     );
@@ -332,7 +565,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -414,6 +647,9 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
     elevation: 1,
   },
+  failedMessageBubble: {
+    backgroundColor: "rgba(255, 107, 107, 0.8)",
+  },
   messageText: {
     fontSize: 16,
     color: "#333333",
@@ -421,12 +657,25 @@ const styles = StyleSheet.create({
   userMessageText: {
     color: "#FFFFFF",
   },
+  failedMessageText: {
+    color: "#FFFFFF",
+  },
+  messageFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    marginTop: 2,
+    marginRight: 2,
+  },
   messageTime: {
     fontSize: 10,
     color: "#999999",
-    alignSelf: "flex-end",
-    marginTop: 2,
-    marginRight: 2,
+  },
+  retryText: {
+    fontSize: 10,
+    color: "#FF6B6B",
+    marginLeft: 5,
+    textDecorationLine: "underline",
   },
   inputContainer: {
     flexDirection: "row",
@@ -459,5 +708,3 @@ const styles = StyleSheet.create({
     backgroundColor: "#CCCCCC",
   },
 });
-
-export default ChatRoomScreen;

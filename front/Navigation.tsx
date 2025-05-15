@@ -10,6 +10,7 @@ import SplashScreen from "./src/screens/SplashScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import RegisterScreen from "./src/screens/RegisterScreen";
 import ChatRoomScreen from "./src/screens/ChatRoomScreen";
+import LogoutScreen from "./src/screens/LogoutScreen";
 import { RootStackParamList } from "./src/types"; // 🛑 important !!
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -57,7 +58,7 @@ const Navigation = () => {
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          options={{ headerShown: true }}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="BookList"
@@ -90,6 +91,18 @@ const Navigation = () => {
           options={{
             headerShown: true,
             // Les options de navigation sont définies dynamiquement dans le composant
+          }}
+        />
+
+        {/* Écran de déconnexion et de gestion du compte */}
+        <Stack.Screen
+          name="Logout"
+          component={LogoutScreen}
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+            // Empêcher le retour à l'écran précédent
+            animationEnabled: true,
           }}
         />
       </Stack.Navigator>

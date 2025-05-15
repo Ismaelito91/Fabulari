@@ -7,14 +7,45 @@ import {
   View,
   Text,
   TouchableWithoutFeedback,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../types";
-import { isAuthenticated } from "../utils/authUtils";
+import { isAuthenticated, logout } from "../utils/authUtils";
 
 type SettingsButtonProps = {
   size?: number;
+};
+
+// Option pour se déconnecter
+const handleLogout = async (
+  closeModal: () => void,
+  navigation: StackNavigationProp<RootStackParamList>
+) => {
+  closeModal(); // Fermer d'abord le modal
+
+  Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
+    { text: "Annuler", style: "cancel" },
+    {
+      text: "Déconnexion",
+      style: "destructive",
+      onPress: () => {
+        console.log("Navigation vers l'écran de déconnexion...");
+        // Utiliser directement handleNavigation pour la redirection
+        try {
+          navigation.navigate("Logout");
+        } catch (error) {
+          console.error("Erreur de navigation:", error);
+          // Solution de secours : réinitialiser la navigation
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Home" }],
+          });
+        }
+      },
+    },
+  ]);
 };
 
 const SettingsButton: React.FC<SettingsButtonProps> = ({ size = 40 }) => {
@@ -22,17 +53,11 @@ const SettingsButton: React.FC<SettingsButtonProps> = ({ size = 40 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Vérifier si l'utilisateur est connecté
-  React.useEffect(() => {
-    const checkAuth = async () => {
-      const loggedIn = await isAuthenticated();
-      setIsLoggedIn(loggedIn);
-    };
-
-    checkAuth();
-  }, []);
-
-  const handlePress = () => {
+  // Vérifier l'état d'authentification à chaque ouverture du modal
+  const handlePress = async () => {
+    const loggedIn = await isAuthenticated();
+    setIsLoggedIn(loggedIn);
+    console.log("État de connexion vérifié dans SettingsButton:", loggedIn);
     setIsModalVisible(true);
   };
 
@@ -51,6 +76,7 @@ const SettingsButton: React.FC<SettingsButtonProps> = ({ size = 40 }) => {
       | "Vestiaire"
       | "Splash"
       | "FavoriteBooks"
+      | "Logout"
   ) => {
     closeModal();
     navigation.navigate(screen);
@@ -91,10 +117,7 @@ const SettingsButton: React.FC<SettingsButtonProps> = ({ size = 40 }) => {
 
                     <TouchableOpacity
                       style={styles.menuItem}
-                      onPress={() => {
-                        // Déconnexion (à implémenter)
-                        closeModal();
-                      }}
+                      onPress={() => handleLogout(closeModal, navigation)}
                     >
                       <Text style={styles.menuText}>Déconnexion</Text>
                     </TouchableOpacity>
@@ -118,7 +141,7 @@ const SettingsButton: React.FC<SettingsButtonProps> = ({ size = 40 }) => {
                   </>
                 )}
 
-                {/* Autre options communes aux deux états */}
+                {/* Bouton de fermeture */}
                 <TouchableOpacity style={styles.menuItem} onPress={closeModal}>
                   <Text style={styles.menuText}>Fermer</Text>
                 </TouchableOpacity>
